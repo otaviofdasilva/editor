@@ -538,6 +538,8 @@ bar.addEventListener('keydown', async function (e) {
 		frame.value = '';
 	    } else if ('dark' === command) {
 		document.body.classList.add('dark');
+	    } else if ('fixed'.startsWith(command)) {
+		frame.value = frame.value.replaceAll(/@\{([^}]*)}/g, '$1');
 	    } else if ('light' === command) {
 		document.body.classList.remove('dark');
 	    } else if ('macro'.startsWith(command)) {
