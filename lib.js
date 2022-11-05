@@ -660,6 +660,10 @@ frame.addEventListener('keydown', async function (e) {
 	    after(store);
 	    after(undefinep);
 	    exec(openLines, -n);
+	} else if ('X' === e.key) {
+	    after(store);
+	    stack(cut, 1);
+	    exec(moveCursorBackward, n);
 	} else if ('b' === e.key) {
 	    after(undefinep);
 	    exec(moveCursorPreviousWordStart, n);
@@ -700,6 +704,10 @@ frame.addEventListener('keydown', async function (e) {
 	    redo(n);
 	} else if ('u' === e.key) {
 	    undo(n);
+	} else if ('x' === e.key) {
+	    after(store);
+	    stack(cut, 1);
+	    exec(moveCursorForward, n);
 	} else if ('w' === e.key) {
 	    after(undefinep);
 	    exec(moveCursorNextWordStart, n);
