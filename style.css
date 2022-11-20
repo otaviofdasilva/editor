@@ -38,8 +38,9 @@ textarea {
     margin: 1rem 1rem 0 1rem;
     margin: 1rem;
     outline: none;
-    overflow-y: hidden;
+    overflow: hidden;
     resize: none;
+    white-space: pre;
     width: calc(100vw - 2rem);
 }
 
