@@ -1,4 +1,4 @@
-aconst BUFFERS = [];
+const BUFFERS = [];
 const CALLBACKS = [];
 const CTX = document.createElement('canvas').getContext('2d');
 const HISTORY_LIMIT = 50;
