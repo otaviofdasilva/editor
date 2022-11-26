@@ -1,4 +1,4 @@
-const BUFFERS = [];
+aconst BUFFERS = [];
 const CALLBACKS = [];
 const CTX = document.createElement('canvas').getContext('2d');
 const HISTORY_LIMIT = 50;
@@ -10,6 +10,8 @@ const READER = new FileReader();
 const STYLE = getComputedStyle(frame);
 const SUGGESTIONS = [];
 const WORDS = new Set();
+
+CTX.font = STYLE.font;
 
 let BUFFER;
 let CLIPBOARD;
@@ -89,10 +91,6 @@ async function cut(f, ...args) {
     return x;
 }
 
-function dispatch(n) {
-    frame.dispatchEvent(new CustomEvent('scroll-frame!', {detail: n}));
-}
-
 function display_buffer({name, text}) {
     buffername.textContent = name;
     frame.value = text;
@@ -147,12 +145,16 @@ function jump_snippet() {
         const initial_position = frame.selectionEnd + m.index + 2;
         const final_position = initial_position + m[1].length;
         frame.setSelectionRange(initial_position, final_position);
+	scroll_v(initial_position);
+	scroll_h(initial_position);
     } else {
         const m = frame.value.match(/@\{([^}]*)}/);
         if (m) {
             const initial_position = m.index + 2;
             const final_position = initial_position + m[1].length;
             frame.setSelectionRange(initial_position, final_position);
+	    scroll_v(initial_position);
+	    scroll_h(initial_position);
         }
     }
 }
@@ -162,7 +164,8 @@ function move_cursor_backward(n, s) {
     const line_start = move_cursor_line_start(1, initial_position, false);
     const final_position = line_start < initial_position - n ? initial_position - n : line_start;
     frame.setSelectionRange(final_position, final_position);
-    scroll_h(line_start, final_position);
+    scroll_v(initial_position);
+    scroll_h(final_position);
     return final_position;
 }
 
@@ -177,6 +180,8 @@ function move_cursor_downward(n, s) {
     const line_start = move_cursor_line_start(1, line_end, false);
     const final_position = move_cursor_forward(P, line_start);
     frame.setSelectionRange(final_position, final_position);
+    scroll_v(initial_position);
+    scroll_h(final_position);
     return final_position;
 }
 
@@ -186,7 +191,8 @@ function move_cursor_forward(n, s) {
     const line_end = move_cursor_line_end(1, initial_position, false);
     const final_position = line_end > initial_position + n ? initial_position + n : line_end;
     frame.setSelectionRange(final_position, final_position);
-    scroll_h(line_start, final_position);
+    scroll_v(initial_position);
+    scroll_h(final_position);
     return final_position;
 }
 
@@ -210,8 +216,9 @@ function move_cursor_line_end(n, s, skip=true) {
         lines += n ? 1 : 0;
     }
 
-    dispatch(lines);
     frame.setSelectionRange(final_position, final_position);
+    scroll_v(initial_position);
+    scroll_h(final_position);
     return final_position;
 }
 
@@ -236,7 +243,8 @@ function move_cursor_line_start(n, s, skip=true) {
     }
 
     frame.setSelectionRange(final_position, final_position);
-    dispatch(lines);
+    scroll_v(initial_position);
+    scroll_h(final_position);
     return final_position;
 }
 
@@ -269,8 +277,8 @@ function move_cursor_next_word_start(n, s) {
     }
 
     frame.setSelectionRange(final_position, final_position);
-    dispatch(lines);
-    scroll_h(line_start, final_position);
+    scroll_v(initial_position);
+    scroll_h(final_position);
     return final_position;
 }
 
@@ -303,8 +311,8 @@ function move_cursor_previous_start(n, s) {
     }
 
     frame.setSelectionRange(final_position, final_position);
-    dispatch(lines);
-    scroll_h(line_start, final_position);
+    scroll_v(initial_position);
+    scroll_h(final_position);
     return final_position;
 }
 
@@ -319,6 +327,8 @@ function move_cursor_upward(n, s) {
     const line_start = move_cursor_line_start(n + 1, initial_position, false);
     const final_position = move_cursor_forward(P, line_start);
     frame.setSelectionRange(final_position, final_position);
+    scroll_v(initial_position);
+    scroll_h(final_position);
     return final_position;
 }
 
@@ -350,8 +360,8 @@ function move_cursor_word_end(n, s) {
     }
 
     frame.setSelectionRange(final_position, final_position);
-    dispatch(lines);
-    scroll_h(line_start, final_position);
+    scroll_v(initial_position);
+    scroll_h(final_position);
     return final_position;
 }
 
@@ -460,13 +470,34 @@ function restore({end, start, text, top}) {
     frame.scroll({top});
 }
 
-function scroll_h(s, e) {
-    CTX.font = STYLE.font;
-    const fz = parseInt(STYLE.fontSize);
-    const t = frame.value.slice(s, e + 1);
-    const w = parseInt(STYLE.width);
+function scroll_h(s) {
+    const initial_position = (s ?? frame.selectionEnd);
+    const e = initial_position + (initial_position
+				  ? (frame.value[initial_position] === '\n' ? 0 : 1)
+				  : 0);
+
+    const i = frame.value.slice(0, e).lastIndexOf('\n') + 1;
+    const t = frame.value.slice(i, e);
+    const cw = parseInt(CTX.measureText('0').width);
     const tw = parseInt(CTX.measureText(t).width);
-    frame.scroll({top: frame.scrollTop, left: Math.trunc(tw / w) * w - fz});
+    const fw = parseInt(STYLE.width);
+    const n = Math.trunc((tw - cw) / fw);
+    const left = (n * fw);
+    frame.scroll({left});
+    return initial_position;
+}
+
+function scroll_v(s) {
+      const initial_position = s ?? frame.selectionEnd;
+
+      const ls = frame.value.slice(0, initial_position).split('').filter(s => s === '\n').length;
+      const lh = parseInt(STYLE.lineHeight);
+      const fh = parseInt(STYLE.height);
+      const hfh = Math.trunc(fh / 2);
+      const n = Math.trunc((ls * lh) / hfh);
+      const top = (n * hfh) - lh;
+      frame.scroll({top});
+      return initial_position;
 }
 
 function showItems(xs) {
